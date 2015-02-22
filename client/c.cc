@@ -160,13 +160,6 @@ hyperdex_client_error_message(hyperdex_client* _cl)
     return cl->error_message();
 }
 
-HYPERDEX_API void
-hyperdex_client_set_type_conversion(hyperdex_client* _cl, bool enabled)
-{
-    hyperdex::client* cl = reinterpret_cast<hyperdex::client*>(_cl);
-    cl->set_type_conversion(enabled);
-}
-
 HYPERDEX_API const char*
 hyperdex_client_error_location(hyperdex_client* _cl)
 {
@@ -1945,6 +1938,22 @@ hyperdex_client_sorted_search(struct hyperdex_client* _cl,
 {
     C_WRAP_EXCEPT(
     return cl->sorted_search(space, checks, checks_sz, sort_by, limit, maxmin, status, attrs, attrs_sz);
+    );
+}
+
+HYPERDEX_API int64_t
+hyperdex_client_sorted_search_partial(struct hyperdex_client* _cl,
+                                      const char* space,
+                                      const struct hyperdex_client_attribute_check* checks, size_t checks_sz,
+                                      const char* sort_by,
+                                      uint64_t limit,
+                                      const char** attrnames, size_t attrnames_sz,
+                                      int maxmin,
+                                      enum hyperdex_client_returncode* status,
+                                      const struct hyperdex_client_attribute** attrs, size_t* attrs_sz)
+{
+    C_WRAP_EXCEPT(
+    return cl->sorted_search_partial(space, checks, checks_sz, sort_by, limit, attrnames, attrnames_sz, maxmin, status, attrs, attrs_sz);
     );
 }
 

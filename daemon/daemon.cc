@@ -118,6 +118,7 @@ daemon :: daemon()
     , m_perf_req_search_next()
     , m_perf_req_search_stop()
     , m_perf_req_sorted_search()
+    , m_perf_req_sorted_search_partial()
     , m_perf_req_count()
     , m_perf_req_search_describe()
     , m_perf_req_group_atomic()
@@ -648,6 +649,10 @@ daemon :: loop(size_t thread)
                 process_req_sorted_search(from, vfrom, vto, msg, up);
                 m_perf_req_sorted_search.tap();
                 break;
+            case REQ_SORTED_SEARCH_PARTIAL:
+                process_req_sorted_search_partial(from, vfrom, vto, msg, up);
+                m_perf_req_sorted_search_partial.tap();
+                break;
             case REQ_COUNT:
                 process_req_count(from, vfrom, vto, msg, up);
                 m_perf_req_count.tap();
@@ -710,6 +715,7 @@ daemon :: loop(size_t thread)
             case RESP_SEARCH_ITEM:
             case RESP_SEARCH_DONE:
             case RESP_SORTED_SEARCH:
+            case RESP_SORTED_SEARCH_PARTIAL:
             case RESP_COUNT:
             case RESP_SEARCH_DESCRIBE:
             case CONFIGMISMATCH:
@@ -977,6 +983,29 @@ daemon :: process_req_search_stop(server_id from,
     }
 
     m_sm.stop(from, vto, search_id);
+}
+
+void
+daemon :: process_req_sorted_search_partial(server_id from,
+                                    virtual_server_id,
+                                    virtual_server_id vto,
+                                    std::auto_ptr<e::buffer> msg,
+                                    e::unpacker up)
+{
+    uint64_t nonce;
+    std::vector<attribute_check> checks;
+    uint64_t limit;
+    std::vector<uint16_t> fields;
+    uint16_t sort_by;
+    uint8_t flags;
+
+    if ((up >> nonce >> checks >> limit >> fields >> sort_by >> flags).error())
+    {
+        LOG(WARNING) << "unpack of REQ_SORTED_SEARCH_PARTIAL failed; here's some hex:  " << msg->hex();
+        return;
+    }
+
+    m_sm.sorted_search_partial(from, vto, nonce, &checks, limit, &fields, sort_by, flags & 0x1);
 }
 
 void
@@ -1410,6 +1439,7 @@ daemon :: collect_stats_msgs(std::ostringstream* ret)
     *ret << " msgs.req_search_next=" << m_perf_req_search_next.read();
     *ret << " msgs.req_search_stop=" << m_perf_req_search_stop.read();
     *ret << " msgs.req_sorted_search=" << m_perf_req_sorted_search.read();
+    *ret << " msgs.req_sorted_search_partial=" << m_perf_req_sorted_search_partial.read();
     *ret << " msgs.req_count=" << m_perf_req_count.read();
     *ret << " msgs.req_search_describe=" << m_perf_req_search_describe.read();
     *ret << " msgs.req_group_atomic=" << m_perf_req_group_atomic.read();

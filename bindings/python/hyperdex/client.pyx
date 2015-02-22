@@ -285,6 +285,7 @@ cdef extern from "hyperdex/client.h":
     int64_t hyperdex_client_search(hyperdex_client* client, const char* space, const hyperdex_client_attribute_check* checks, size_t checks_sz, hyperdex_client_returncode* status, const hyperdex_client_attribute** attrs, size_t* attrs_sz)
     int64_t hyperdex_client_search_describe(hyperdex_client* client, const char* space, const hyperdex_client_attribute_check* checks, size_t checks_sz, hyperdex_client_returncode* status, const char** description)
     int64_t hyperdex_client_sorted_search(hyperdex_client* client, const char* space, const hyperdex_client_attribute_check* checks, size_t checks_sz, const char* sort_by, uint64_t limit, int maxmin, hyperdex_client_returncode* status, const hyperdex_client_attribute** attrs, size_t* attrs_sz)
+    int64_t hyperdex_client_sorted_search_partial(hyperdex_client* client, const char* space, const hyperdex_client_attribute_check* checks, size_t checks_sz, const char* sort_by, uint64_t limit, const char** attrnames, size_t attrnames_sz, int maxmin, hyperdex_client_returncode* status, const hyperdex_client_attribute** attrs, size_t* attrs_sz)
     int64_t hyperdex_client_count(hyperdex_client* client, const char* space, const hyperdex_client_attribute_check* checks, size_t checks_sz, hyperdex_client_returncode* status, uint64_t* count)
     # End Automatically Generated Prototypes
 
@@ -376,6 +377,7 @@ ctypedef int64_t asynccall__spacename_predicates_mapattributes__status_count_fpt
 ctypedef int64_t iterator__spacename_predicates__status_attributes_fptr(hyperdex_client* client, const char* space, const hyperdex_client_attribute_check* checks, size_t checks_sz, hyperdex_client_returncode* status, const hyperdex_client_attribute** attrs, size_t* attrs_sz)
 ctypedef int64_t asynccall__spacename_predicates__status_description_fptr(hyperdex_client* client, const char* space, const hyperdex_client_attribute_check* checks, size_t checks_sz, hyperdex_client_returncode* status, const char** description)
 ctypedef int64_t iterator__spacename_predicates_sortby_limit_maxmin__status_attributes_fptr(hyperdex_client* client, const char* space, const hyperdex_client_attribute_check* checks, size_t checks_sz, const char* sort_by, uint64_t limit, int maxmin, hyperdex_client_returncode* status, const hyperdex_client_attribute** attrs, size_t* attrs_sz)
+ctypedef int64_t iterator__spacename_predicates_sortby_limit_attributenames_maxmin__status_attributes_fptr(hyperdex_client* client, const char* space, const hyperdex_client_attribute_check* checks, size_t checks_sz, const char* sort_by, uint64_t limit, const char** attrnames, size_t attrnames_sz, int maxmin, hyperdex_client_returncode* status, const hyperdex_client_attribute** attrs, size_t* attrs_sz)
 # End Automatically Generated Function Pointers
 
 
@@ -1563,6 +1565,29 @@ cdef class Client:
         self.ops[it.reqid] = it
         return it
 
+    cdef iterator__spacename_predicates_sortby_limit_attributenames_maxmin__status_attributes(self, iterator__spacename_predicates_sortby_limit_attributenames_maxmin__status_attributes_fptr f, bytes spacename, dict predicates, bytes sortby, int limit, attributenames, str maxmin):
+        cdef Iterator it = Iterator(self)
+        cdef const char* in_space
+        cdef hyperdex_client_attribute_check* in_checks
+        cdef size_t in_checks_sz
+        cdef const char* in_sort_by
+        cdef uint64_t in_limit
+        cdef const char** in_attrnames
+        cdef size_t in_attrnames_sz
+        cdef int in_maxmin
+        self.convert_spacename(it.arena, spacename, &in_space);
+        self.convert_predicates(it.arena, predicates, &in_checks, &in_checks_sz);
+        self.convert_sortby(it.arena, sortby, &in_sort_by);
+        self.convert_limit(it.arena, limit, &in_limit);
+        self.convert_attributenames(it.arena, attributenames, &in_attrnames, &in_attrnames_sz);
+        self.convert_maxmin(it.arena, maxmin, &in_maxmin);
+        it.reqid = f(self.client, in_space, in_checks, in_checks_sz, in_sort_by, in_limit, in_attrnames, in_attrnames_sz, in_maxmin, &it.status, &it.attrs, &it.attrs_sz);
+        if it.reqid < 0:
+            raise HyperDexClientException(it.status, hyperdex_client_error_message(self.client))
+        it.encode_return = hyperdex_python_client_iterator_encode_status_attributes
+        self.ops[it.reqid] = it
+        return it
+
     def async_get(self, bytes spacename, key, auth=None):
         return self.asynccall__spacename_key__status_attributes(hyperdex_client_get, spacename, key, auth)
     def get(self, bytes spacename, key, auth=None):
@@ -2135,6 +2160,9 @@ cdef class Client:
 
     def sorted_search(self, bytes spacename, dict predicates, bytes sortby, int limit, str maxmin):
         return self.iterator__spacename_predicates_sortby_limit_maxmin__status_attributes(hyperdex_client_sorted_search, spacename, predicates, sortby, limit, maxmin)
+
+    def sorted_search_partial(self, bytes spacename, dict predicates, bytes sortby, int limit, attributenames, str maxmin):
+        return self.iterator__spacename_predicates_sortby_limit_attributenames_maxmin__status_attributes(hyperdex_client_sorted_search_partial, spacename, predicates, sortby, limit, attributenames, maxmin)
 
     def async_count(self, bytes spacename, dict predicates, auth=None):
         return self.asynccall__spacename_predicates__status_count(hyperdex_client_count, spacename, predicates, auth)

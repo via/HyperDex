@@ -84,6 +84,14 @@ class client
                               bool maximize,
                               hyperdex_client_returncode* status,
                               const hyperdex_client_attribute** attrs, size_t* attrs_sz);
+        int64_t sorted_search_partial(const char* space,
+                              const hyperdex_client_attribute_check* checks, size_t checks_sz,
+                              const char* sort_by,
+                              uint64_t limit,
+                              const char **attrnames, size_t attrnames_sz,
+                              bool maximize,
+                              hyperdex_client_returncode* status,
+                              const hyperdex_client_attribute** attrs, size_t* attrs_sz);
         int64_t group_del(const char* space,
                           const hyperdex_client_attribute_check* checks, size_t checks_sz,
                           hyperdex_client_returncode* status);
@@ -139,6 +147,7 @@ class client
         friend class pending_get_partial;
         friend class pending_search;
         friend class pending_sorted_search;
+        friend class pending_sorted_search_partial;
 
     private:
         size_t prepare_checks(const char* space, const schema& sc,
@@ -180,6 +189,9 @@ class client
                                     std::auto_ptr<e::buffer> msg,
                                     hyperdex_client_returncode* status);
         bool maintain_coord_connection(hyperdex_client_returncode* status);
+        bool attributes_to_numbers(const char *space, const schema* sc, const char **attrs,
+                                      size_t attrs_sz, hyperdex_client_returncode* status, 
+                                      std::vector<uint16_t> *attrnums);
         bool send(network_msgtype mt,
                   const virtual_server_id& to,
                   uint64_t nonce,

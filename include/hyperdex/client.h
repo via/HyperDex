@@ -1001,6 +1001,17 @@ hyperdex_client_sorted_search(struct hyperdex_client* client,
                               const struct hyperdex_client_attribute** attrs, size_t* attrs_sz);
 
 int64_t
+hyperdex_client_sorted_search_partial(struct hyperdex_client* client,
+                                      const char* space,
+                                      const struct hyperdex_client_attribute_check* checks, size_t checks_sz,
+                                      const char* sort_by,
+                                      uint64_t limit,
+                                      const char** attrnames, size_t attrnames_sz,
+                                      int maxmin,
+                                      enum hyperdex_client_returncode* status,
+                                      const struct hyperdex_client_attribute** attrs, size_t* attrs_sz);
+
+int64_t
 hyperdex_client_count(struct hyperdex_client* client,
                       const char* space,
                       const struct hyperdex_client_attribute_check* checks, size_t checks_sz,

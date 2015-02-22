@@ -154,6 +154,8 @@ def generate_client_c_wrapper(x):
         func += '    return cl->search_describe(space, checks, checks_sz, status, description);\n'
     elif x.name == 'sorted_search':
         func += '    return cl->sorted_search(space, checks, checks_sz, sort_by, limit, maxmin, status, attrs, attrs_sz);\n'
+    elif x.name == 'sorted_search_partial':
+        func += '    return cl->sorted_search_partial(space, checks, checks_sz, sort_by, limit, attrnames, attrnames_sz, maxmin, status, attrs, attrs_sz);\n'
     elif x.name == 'count':
         func += '    return cl->count(space, checks, checks_sz, status, count);\n'
     elif x.name.startswith('group_'):

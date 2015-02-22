@@ -78,7 +78,14 @@ class search_manager
                            uint64_t limit,
                            uint16_t sort_by,
                            bool maximize);
-
+        void sorted_search_partial(const server_id& from,
+                           const virtual_server_id& to,
+                           uint64_t nonce,
+                           std::vector<attribute_check>* checks,
+                           uint64_t limit,
+                           std::vector<uint16_t> *fields,
+                           uint16_t sort_by,
+                           bool maximize);
         // Find keys that match the check and forward ops to the corresponding servers
         // Essentially this splits out the group operation in several seperate operations
         // (by acting like it was a client)

@@ -422,6 +422,97 @@ operator > (const _sorted_search_item& lhs, const _sorted_search_item& rhs)
 
 } // namespace hyperdex
 
+void 
+search_manager :: sorted_search_partial(const server_id& from,
+                           const virtual_server_id& to,
+                           uint64_t nonce,
+                           std::vector<attribute_check>* checks,
+                           uint64_t limit,
+                           std::vector<uint16_t> *fields,
+                           uint16_t sort_by,
+                           bool maximize)
+{
+    region_id ri(m_daemon->m_config.get_region_id(to));
+    const schema* sc = m_daemon->m_config.get_schema(ri);
+
+    if (sc->authorization)
+    {
+        return;
+    }
+
+    std::stable_sort(checks->begin(), checks->end());
+    datalayer::returncode rc = datalayer::SUCCESS;
+    datalayer::snapshot snap = m_daemon->m_data.make_snapshot();
+    e::intrusive_ptr<datalayer::iterator> iter;
+    iter = m_daemon->m_data.make_search_iterator(snap, ri, *checks, NULL);
+
+    switch (rc)
+    {
+        case datalayer::SUCCESS:
+            break;
+        case datalayer::NOT_FOUND:
+        case datalayer::BAD_ENCODING:
+        case datalayer::CORRUPTION:
+        case datalayer::IO_ERROR:
+        case datalayer::LEVELDB_ERROR:
+            LOG(ERROR) << "could not make snapshot for search:  " << rc;
+            break;
+        default:
+            abort();
+    }
+
+    _sorted_search_params params(sc, sort_by, maximize);
+    std::vector<_sorted_search_item> top_n;
+    top_n.reserve(limit);
+
+    while (iter->valid())
+    {
+        top_n.push_back(_sorted_search_item(&params));
+        m_daemon->m_data.get_from_iterator(ri, *sc, iter.get(), &top_n.back().key, &top_n.back().value, &top_n.back().version, &top_n.back().ref);
+        std::push_heap(top_n.begin(), top_n.end());
+
+        if (top_n.size() > limit)
+        {
+            std::pop_heap(top_n.begin(), top_n.end());
+            top_n.pop_back();
+        }
+
+        iter->next();
+    }
+
+    std::sort(top_n.begin(), top_n.end(), std::greater<_sorted_search_item>());
+    size_t sz = HYPERDEX_HEADER_SIZE_VC + sizeof(uint64_t) + sizeof(uint64_t) + sizeof(uint32_t);
+
+    for (size_t i = 0; i < top_n.size(); ++i)
+    {
+        sz += pack_size(top_n[i].key);
+        for (size_t j = 0; j < top_n[i].value.size(); ++j) {
+            uint16_t attr = j + 1;
+            if (std::binary_search(fields->begin(), fields->end(), attr)) {
+                sz += sizeof(uint16_t) + pack_size(top_n[i].value[j]);
+            }
+        }
+    }
+
+    std::auto_ptr<e::buffer> msg(e::buffer::create(sz));
+    e::buffer::packer pa = msg->pack_at(HYPERDEX_HEADER_SIZE_VC);
+    pa = pa << nonce << static_cast<uint64_t>(top_n.size()) << uint16_t(fields->size());
+
+    for (size_t i = 0; i < top_n.size(); ++i)
+    {
+        pa = pa << top_n[i].key;
+        for (size_t j = 0; j < top_n[i].value.size(); ++j) {
+            uint16_t attr = j + 1;
+            if (std::binary_search(fields->begin(), fields->end(), attr)) {
+                pa = pa << attr << top_n[i].value[j];
+            }
+        } 
+    }
+ 
+
+    m_daemon->m_comm.send_client(to, from, RESP_SORTED_SEARCH_PARTIAL, msg);
+}
+
 void
 search_manager :: sorted_search(const server_id& from,
                                 const virtual_server_id& to,

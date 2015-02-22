@@ -60,6 +60,7 @@
 #include "client/pending_search.h"
 #include "client/pending_search_describe.h"
 #include "client/pending_sorted_search.h"
+#include "client/pending_sorted_search_partial.h"
 
 #define ERROR(CODE) \
     *status = HYPERDEX_CLIENT_ ## CODE; \
@@ -196,28 +197,9 @@ client :: get_partial(const char* space, const char* _key, size_t _key_sz,
     }
 
     std::vector<uint16_t> attrnums;
-
-    for (size_t i = 0; i < attrnames_sz; ++i)
-    {
-        uint16_t attr = sc->lookup_attr(attrnames[i]);
-
-        if (attr == UINT16_MAX)
-        {
-            ERROR(UNKNOWNATTR) << "attribute \"" << e::strescape(attrnames[i])
-                               << "\" is not an attribute in space \""
-                               << e::strescape(space) << "\"";
-            return -1;
-        }
-
-        if (attr == 0)
-        {
-            ERROR(DONTUSEKEY) << "don't specify the key (\"" << e::strescape(attrnames[i])
-                              << "\") when doing get_partial on space \""
-                               << e::strescape(space) << "\"";
-            return -1;
-        }
-
-        attrnums.push_back(attr);
+    if (!attributes_to_numbers(space, sc, attrnames, attrnames_sz, 
+                               status, &attrnums)) {
+        return -1;
     }
 
     datatype_info* di = datatype_info::lookup(sc->attrs[0].type);
@@ -358,6 +340,61 @@ client :: sorted_search(const char* space,
 }
 
 int64_t
+client :: sorted_search_partial(const char* space,
+                        const hyperdex_client_attribute_check* chks, size_t chks_sz,
+                        const char* sort_by,
+                        uint64_t limit,
+                        const char **attrnames, size_t attrnames_sz,
+                        bool maximize,
+                        hyperdex_client_returncode* status,
+                        const hyperdex_client_attribute **attrs, size_t *attrs_sz)
+{
+    SEARCH_BOILERPLATE
+    uint16_t sort_by_num = sc->lookup_attr(sort_by);
+
+
+    if (sort_by_num == sc->attrs_sz)
+    {
+        ERROR(UNKNOWNATTR) << "\"" << e::strescape(sort_by)
+                           << "\" is not an attribute of space \""
+                           << e::strescape(space) << "\"";
+        return -1 - chks_sz;
+    }
+
+    datatype_info* di = datatype_info::lookup(sc->attrs[sort_by_num].type);
+
+    if (!di->comparable())
+    {
+        ERROR(WRONGTYPE) << "cannot sort by attribute \""
+                         << e::strescape(sort_by)
+                         << "\": it is not comparable";
+        return -1 - chks_sz;
+    }
+
+
+    std::vector<uint16_t> attrnums;
+    if (!attributes_to_numbers(space, sc, attrnames, attrnames_sz, status, &attrnums)) {
+        return -1;
+    }
+
+    int64_t client_id = m_next_client_id++;
+    e::intrusive_ptr<pending_aggregation> op;
+    op = new pending_sorted_search_partial(this, client_id, maximize, limit, sort_by_num, di, status, attrs, attrs_sz);
+    int8_t max = maximize ? 1 : 0;
+    size_t sz = HYPERDEX_CLIENT_HEADER_SIZE_REQ
+              + pack_size(checks)
+              + sizeof(limit)
+              + sizeof(uint32_t) + attrnums.size() * sizeof(uint16_t)
+              + sizeof(sort_by_num)
+              + sizeof(max);
+    std::auto_ptr<e::buffer> msg(e::buffer::create(sz));
+    e::buffer::packer pa = msg->pack_at(HYPERDEX_CLIENT_HEADER_SIZE_REQ);
+    pa = pa << checks << limit << attrnums;
+    pa = pa << sort_by_num << max;
+    return perform_aggregation(servers, op, REQ_SORTED_SEARCH_PARTIAL, msg, status);
+}
+
+int64_t
 client :: count(const char* space,
                 const hyperdex_client_attribute_check* chks, size_t chks_sz,
                 hyperdex_client_returncode* status,
@@ -372,6 +409,36 @@ client :: count(const char* space,
     std::auto_ptr<e::buffer> msg(e::buffer::create(sz));
     msg->pack_at(HYPERDEX_CLIENT_HEADER_SIZE_REQ) << checks;
     return perform_aggregation(servers, op, REQ_COUNT, msg, status);
+}
+
+bool
+client :: attributes_to_numbers(const char *space, const schema *sc, const char **attrs,
+                                size_t attrs_sz, hyperdex_client_returncode *status,
+                                std::vector<uint16_t> *attrnums) 
+{
+    for (size_t i = 0; i < attrs_sz; ++i)
+    {
+        uint16_t attr = sc->lookup_attr(attrs[i]);
+
+        if (attr == UINT16_MAX)
+        {
+            ERROR(UNKNOWNATTR) << "attribute \"" << e::strescape(attrs[i])
+                               << "\" is not an attribute in space \""
+                               << e::strescape(space) << "\"";
+            return false;
+        }
+
+        if (attr == 0)
+        {
+            ERROR(DONTUSEKEY) << "don't specify the key (\"" << e::strescape(attrs[i])
+                              << "\") when doing get_partial on space \""
+                               << e::strescape(space) << "\"";
+            return false;
+        }
+
+        attrnums->push_back(attr);
+    }
+    return true;
 }
 
 int64_t

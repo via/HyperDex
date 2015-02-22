@@ -220,6 +220,7 @@ Client = [
     Method('search', Iterator, (SpaceName, Predicates), (Status, Attributes)),
     Method('search_describe', AsyncCall, (SpaceName, Predicates), (Status, Description)),
     Method('sorted_search', Iterator, (SpaceName, Predicates, SortBy, Limit, MaxMin), (Status, Attributes)),
+    Method('sorted_search_partial', Iterator, (SpaceName, Predicates, SortBy, Limit, AttributeNames, MaxMin), (Status, Attributes)),
     Method('count', AsyncCall, (SpaceName, Predicates), (Status, Count)),
 ]
 

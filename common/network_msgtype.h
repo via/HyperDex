@@ -56,6 +56,9 @@ enum network_msgtype
     REQ_SORTED_SEARCH   = 40,
     RESP_SORTED_SEARCH  = 41,
 
+    REQ_SORTED_SEARCH_PARTIAL   = 42,
+    RESP_SORTED_SEARCH_PARTIAL  = 43,
+
     /* 48, 49 retired */
 
     REQ_COUNT       = 50,

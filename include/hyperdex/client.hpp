@@ -345,6 +345,14 @@ class Client
                               enum hyperdex_client_returncode* status,
                               const struct hyperdex_client_attribute** attrs, size_t* attrs_sz)
             { return hyperdex_client_sorted_search(m_cl, space, checks, checks_sz, sort_by, limit, maximize, status, attrs, attrs_sz); }
+        int64_t sorted_search_partial(const char* space,
+                              const struct hyperdex_client_attribute_check* checks, size_t checks_sz,
+                              const char* sort_by, uint64_t limit, 
+                              const char** attrnames, size_t attrnames_sz,
+                              int maxmin,
+                              enum hyperdex_client_returncode* status,
+                              const struct hyperdex_client_attribute** attrs, size_t* attrs_sz)
+            { return hyperdex_client_sorted_search_partial(m_cl, space, checks, checks_sz, sort_by, limit, attrnames, attrnames_sz, maxmin, status, attrs, attrs_sz); }
         int64_t group_del(const char* space,
                           const struct hyperdex_client_attribute_check* checks, size_t checks_sz,
                           enum hyperdex_client_returncode* status,

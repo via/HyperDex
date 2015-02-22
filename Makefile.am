@@ -451,6 +451,7 @@ libhyperdex_client_la_SOURCES += client/pending_get_partial.cc
 libhyperdex_client_la_SOURCES += client/pending_search.cc
 libhyperdex_client_la_SOURCES += client/pending_search_describe.cc
 libhyperdex_client_la_SOURCES += client/pending_sorted_search.cc
+libhyperdex_client_la_SOURCES += client/pending_sorted_search_partial.cc
 libhyperdex_client_la_SOURCES += client/util.cc
 libhyperdex_client_la_LIBADD =
 libhyperdex_client_la_LIBADD += $(TREADSTONE_LIBS)
